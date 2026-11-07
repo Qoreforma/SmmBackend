@@ -1,0 +1,65 @@
+name: Backend Staging Deployment
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Deploy to Staging Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "./*"
+          target: ${{ secrets.PROJECT_PATH }}
+
+      - name: Write .env file on server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
+          script: |
+            echo "${{ secrets.STAGING_ENV_FILE }}" > ${{ secrets.ENV_PATH }}
+            chmod 600 ${{ secrets.ENV_PATH }}
+
+      - name: Restart Staging Application
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            mkdir -p logs
+            
+            # Reload uses the ecosystem file to gracefully swap processes
+            pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+            
+            pm2 save
+            pm2 list

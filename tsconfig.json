@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "types": ["node",  "jest"],
+    "target": "ES2020",
+    "module": "node16", 
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node16",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

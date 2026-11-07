@@ -1,0 +1,61 @@
+name: Backend Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Create .env File
+        env:
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+        run: |
+          printf '%s\n' "$PROD_ENV_FILE" > .env
+
+      - name: Deploy to Production Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          source: "./*, .env"
+          target: ${{ secrets.PROJECT_PATH }}
+
+      - name: Restart Application
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            chmod 600 .env
+            mkdir -p logs
+            
+            # Reload uses the ecosystem file to gracefully swap processes
+            pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+            
+            pm2 save
+            pm2 list
