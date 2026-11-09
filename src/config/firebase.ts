@@ -37,8 +37,8 @@ export const initializeFirebase = () => {
         );
         firebaseInitialized = true;
       } catch (fileError) {
-        logger.warn(
-          "Service account file not found, falling back to environment variables"
+        logger.info(
+          "Firebase service account file not found, falling back to environment variables"
         );
         initializeViaEnv();
       }
@@ -47,8 +47,7 @@ export const initializeFirebase = () => {
       initializeViaEnv();
     }
   } catch (error) {
-    logger.error("❌ Firebase initialization failed:", error);
-    throw new Error("Critical: Firebase initialization failed");
+    logger.warn("⚠️ Firebase initialization skipped (push notifications disabled):", error);
   }
 };
 
@@ -61,9 +60,10 @@ const initializeViaEnv = () => {
 
   const missing = requiredVars.filter((v) => !process.env[v]);
   if (missing.length > 0) {
-    throw new Error(
-      `Missing Firebase environment variables: ${missing.join(", ")}`
+    logger.warn(
+      `⚠️ Firebase credentials not configured (${missing.join(", ")} missing). Push notifications will be disabled.`
     );
+    return;
   }
 
   try {
@@ -84,8 +84,7 @@ const initializeViaEnv = () => {
     );
     firebaseInitialized = true;
   } catch (error) {
-    logger.error("❌ Firebase environment initialization failed:", error);
-    throw error;
+    logger.warn("⚠️ Firebase environment initialization failed (push notifications disabled):", error);
   }
 };
 

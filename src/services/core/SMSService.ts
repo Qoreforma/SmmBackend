@@ -26,14 +26,16 @@ export class SMSService {
     this.senderId = smsConfig.termii.senderId;
 
     if (!this.baseUrl || !this.apiKey) {
-      logger.error("Termii configuration is incomplete", {
-        hasBaseUrl: !!this.baseUrl,
-        hasApiKey: !!this.apiKey,
-      });
+      logger.info("ℹ️ Termii SMS not configured (SMS delivery is disabled)");
     }
   }
 
   async sendSMS(options: SMSOptions): Promise<void> {
+    if (!this.baseUrl || !this.apiKey) {
+      logger.warn(`SMS delivery to ${options.to} skipped: Termii is not configured`);
+      return;
+    }
+
     try {
       const url = `${this.baseUrl}/sms/send`;
 
